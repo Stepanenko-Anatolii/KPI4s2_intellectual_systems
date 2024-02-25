@@ -1,6 +1,7 @@
 from marshmallow import Schema, fields
 from schema.accelerometer_schema import AccelerometerSchema
 from schema.gps_schema import GpsSchema
+from domain.aggregated_data import AggregatedData
 
 
 class AggregatedDataSchema(Schema):

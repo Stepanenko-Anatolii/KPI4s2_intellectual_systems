@@ -1,5 +1,5 @@
-from marshmallow import Schema, fields
-
+from marshmallow import Schema, fields, post_load
+from domain.gps import Gps
 
 class GpsSchema(Schema):
     longitude = fields.Number()
