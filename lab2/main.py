@@ -13,7 +13,7 @@ from sqlalchemy import (
     DateTime,
 )
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import select
+from sqlalchemy.sql import select, update, delete
 from datetime import datetime
 from pydantic import BaseModel, field_validator
 from config import (
@@ -126,9 +126,27 @@ async def send_data_to_subscribers(user_id: int, data):
 
 @app.post("/processed_agent_data/")
 async def create_processed_agent_data(data: List[ProcessedAgentData]):
-    # Insert data to database
-    # Send data to subscribers
-    pass
+    session = SessionLocal()
+    try:
+        for record in data:
+            new_record = processed_agent_data.insert().values(
+                road_state=record.road_state,
+                user_id=record.agent_data.user_id,
+                x=record.agent_data.accelerometer.x,
+                y=record.agent_data.accelerometer.y,
+                z=record.agent_data.accelerometer.z,
+                latitude=record.agent_data.gps.latitude,
+                longitude=record.agent_data.gps.longitude,
+                timestamp=record.agent_data.timestamp
+            )
+            operation_result = session.execute(new_record)
+            session.commit()
+            await send_data_to_subscribers(record.agent_data.user_id, operation_result)
+    except Exception as exc:
+        session.rollback()
+        raise exc
+    finally:
+        session.close()
 
 
 @app.get(
@@ -136,14 +154,28 @@ async def create_processed_agent_data(data: List[ProcessedAgentData]):
     response_model=ProcessedAgentDataInDB,
 )
 def read_processed_agent_data(processed_agent_data_id: int):
-    # Get data by id
-    pass
+    session = SessionLocal()
+    try:
+        query = select(processed_agent_data).where(processed_agent_data.c.id == processed_agent_data_id)
+        single_result = session.execute(query).fetchone()
+
+        if single_result is None:
+            raise HTTPException(status_code=404, detail="ProcessedAgentData - not found!")
+
+        return ProcessedAgentDataInDB(**single_result._asdict())
+    finally:
+        session.close()
 
 
 @app.get("/processed_agent_data/", response_model=list[ProcessedAgentDataInDB])
 def list_processed_agent_data():
-    # Get list of data
-    pass
+    session = SessionLocal()
+    try:
+        query = select(processed_agent_data)
+        all_results = session.execute(query).fetchall()
+        return [ProcessedAgentDataInDB(**row._asdict()) for row in all_results]
+    finally:
+        session.close()
 
 
 @app.put(
@@ -151,8 +183,35 @@ def list_processed_agent_data():
     response_model=ProcessedAgentDataInDB,
 )
 def update_processed_agent_data(processed_agent_data_id: int, data: ProcessedAgentData):
-    # Update data
-    pass
+    session = SessionLocal()
+    try:
+        update_action = update(processed_agent_data).where(
+            processed_agent_data.c.id == processed_agent_data_id
+        ).values(
+            road_state=data.road_state,
+            user_id=data.agent_data.user_id,
+            x=data.agent_data.accelerometer.x,
+            y=data.agent_data.accelerometer.y,
+            z=data.agent_data.accelerometer.z,
+            latitude=data.agent_data.gps.latitude,
+            longitude=data.agent_data.gps.longitude,
+            timestamp=data.agent_data.timestamp
+        )
+        update_result = session.execute(update_action)
+        session.commit()
+
+        if update_result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="ProcessedAgentData - not found!")
+
+        refresh_query = select(processed_agent_data).where(processed_agent_data.c.id == processed_agent_data_id)
+        refreshed_result = session.execute(refresh_query).fetchone()
+
+        if refreshed_result is None:
+            raise HTTPException(status_code=404, detail="ProcessedAgentData - failed to fetch!")
+
+        return ProcessedAgentDataInDB(**refreshed_result._asdict())
+    finally:
+        session.close()
 
 
 @app.delete(
@@ -160,8 +219,21 @@ def update_processed_agent_data(processed_agent_data_id: int, data: ProcessedAge
     response_model=ProcessedAgentDataInDB,
 )
 def delete_processed_agent_data(processed_agent_data_id: int):
-    # Delete by id
-    pass
+    session = SessionLocal()
+    try:
+        pre_check_query = select(processed_agent_data).where(processed_agent_data.c.id == processed_agent_data_id)
+        pre_check_result = session.execute(pre_check_query).fetchone()
+
+        if pre_check_result is None:
+            raise HTTPException(status_code=404, detail="ProcessedAgentData - not found!")
+
+        delete_action = delete(processed_agent_data).where(processed_agent_data.c.id == processed_agent_data_id)
+        session.execute(delete_action)
+        session.commit()
+
+        return ProcessedAgentDataInDB(**pre_check_result._asdict())
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":
