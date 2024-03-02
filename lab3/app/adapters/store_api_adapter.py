@@ -21,4 +21,16 @@ class StoreApiAdapter(StoreGateway):
         Returns:
             bool: True if the data is successfully saved, False otherwise.
         """
-        # Implement it
+        base_url = f"{self.api_base_url}/processed_agent_data/"
+
+        agent_data_json = [agent.model_dump_json() for agent in processed_agent_data_batch]
+        json_payload = f"[{','.join(agent_data_json)}]"
+        headers = {'Content-Type': 'application/json'}
+        result = requests.post(base_url, data=json_payload, headers=headers)
+
+        if result.status_code == 200:
+            return True
+        
+        logging.info(f"Unexpected response from Hub\nPayload: {agent_data_json}\nResult: {result}")
+        return False
+
