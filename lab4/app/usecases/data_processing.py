@@ -13,16 +13,16 @@ def process_agent_data(
     Returns:
         processed_data_batch (ProcessedAgentData): Processed data containing the classified state of the road surface and agent data.
     """
-    
-    # TODO: Implement it
     quality: str = "medium"
     value = abs(agent_data.accelerometer.y)
+    timestamp = agent_data.timestamp
+    user_id = 2
 
-    if value <= 80:
+    if value <= 75:
         quality = "Good"
-    elif 80 < value <= 150:
-        quality = "Medium"
+    elif 75 < value <= 160:
+        quality = "Average"
     else:
-        quality = "Poor"
+        quality = "Bad"
 
-    return ProcessedAgentData(road_state=quality, agent_data=agent_data)
+    return ProcessedAgentData(road_state=quality, agent_data=agent_data, user_id=user_id, timestamp=timestamp)

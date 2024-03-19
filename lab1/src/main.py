@@ -33,9 +33,11 @@ def publish(client, topic, datasource, delay):
             serialized_data = [
                 AggregatedDataSchema().dumps(data_aggregated),
                 ParkingSchema().dumps(data_parking)]
-            for topic, payload in zip(topic, serialized_data): # Try publishing and storing status
-                result = client.publish(topic, payload)
-                status = result[0]
+            #for tp, payload in zip(topic, serialized_data): # Try publishing and storing status
+            #    result = client.publish(topic, payload)
+            #    status = result[0]
+            result = client.publish(topic, AggregatedDataSchema().dumps(data_aggregated))
+            status = result[0]
         if status == 0:
             pass
             # print(f"Send `{msg}` to topic `{topic}`")
@@ -49,7 +51,7 @@ def run():
     # Prepare datasource
     datasource = FileDatasource("data/accelerometer.csv", "data/gps.csv", "data/parking.csv")
     # Infinity publish data
-    publish(client, config.MQTT_TOPIC.split(','), datasource, config.DELAY)
+    publish(client, config.MQTT_TOPIC, datasource, config.DELAY)
 
 if __name__ == "__main__":
     run()

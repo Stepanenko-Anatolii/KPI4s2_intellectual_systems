@@ -4,6 +4,7 @@ from app.interfaces.agent_gateway import AgentGateway
 from app.entities.agent_data import AgentData, GpsData
 from app.usecases.data_processing import process_agent_data
 from app.interfaces.hub_gateway import HubGateway
+import json
 
 
 class AgentMQTTAdapter(AgentGateway):
@@ -24,6 +25,9 @@ class AgentMQTTAdapter(AgentGateway):
         # Hub
         self.hub_gateway = hub_gateway
 
+    def set_on_message_callback(self, callback):
+        self.client.on_message = callback
+
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             logging.info("Connected to MQTT broker")
@@ -34,7 +38,7 @@ class AgentMQTTAdapter(AgentGateway):
     def on_message(self, client, userdata, msg):
         """Processing agent data and sent it to hub gateway"""
         try:
-            payload: str = msg.payload.decode("utf-8")
+            payload = msg.payload.decode("utf-8")
             # Create AgentData instance with the received data
             agent_data = AgentData.model_validate_json(payload, strict=True)
             # Process the received data (you can call a use case here if needed)
@@ -57,6 +61,7 @@ class AgentMQTTAdapter(AgentGateway):
         self.client.loop_stop()
 
 
+"""
 # Usage example:
 if __name__ == "__main__":
     broker_host = "localhost"
@@ -74,3 +79,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         adapter.stop()
         logging.info("Adapter stopped.")
+"""
